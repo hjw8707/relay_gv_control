@@ -1,0 +1,12 @@
+{
+    "htmlWhitespaceSensitivity": "ignore",
+    "bracketSameLine": true,
+    "overrides": [
+        {
+            "files": "*.html",
+            "options": {
+                "parser": "html"
+            }
+        }
+    ]
+}

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>릴레이 제어 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .relay-controls {
+            padding: 30px;
+        }
+
+        .relay-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #007bff;
+            transition: all 0.3s ease;
+        }
+
+        .relay-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .relay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .relay-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-indicator {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .status-on {
+            background: #28a745;
+            color: white;
+        }
+
+        .status-off {
+            background: #dc3545;
+            color: white;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-on {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-off {
+            background: linear-gradient(135deg, #dc3545, #fd7e14);
+            color: white;
+        }
+
+        .btn-toggle {
+            background: linear-gradient(135deg, #007bff, #6610f2);
+            color: white;
+        }
+
+        .global-controls {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 2px solid #e9ecef;
+            text-align: center;
+        }
+
+        .global-controls h3 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.3em;
+        }
+
+        .global-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-global {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1em;
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 600px) {
+            .relay-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .control-buttons {
+                justify-content: center;
+            }
+
+            .global-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn-global {
+                width: 200px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 릴레이 제어 시스템</h1>
+            <p>라즈베리 파이 릴레이 모듈 웹 제어</p>
+        </div>
+
+        <div class="relay-controls">
+            <div id="message" class="message"></div>
+
+            {% for i in range(relay_names|length) %}
+            <div class="relay-card" id="relay-{{ i }}">
+                <div class="relay-header">
+                    <div class="relay-name">{{ relay_names[i] }}</div>
+                    <div class="status-indicator {% if relay_states[i] %}status-on{% else %}status-off{% endif %}"
+                        id="status-{{ i }}">
+                        {% if relay_states[i] %}열림{% else %}닫힘{% endif %}
+                    </div>
+                </div>
+                <div class="control-buttons">
+                    <button class="btn btn-on" onclick="setRelay({{ i }}, true)">열기</button>
+                    <button class="btn btn-off" onclick="setRelay({{ i }}, false)">닫기</button>
+                    <button class="btn btn-toggle" onclick="toggleRelay({{ i }})">토글</button>
+                </div>
+            </div>
+            {% endfor %}
+
+            <div class="global-controls">
+                <h3>전체 제어</h3>
+                <div class="global-buttons">
+                    <button class="btn btn-global" onclick="setAllRelays(true)">모두 열기</button>
+                    <button class="btn btn-global" onclick="setAllRelays(false)">모두 닫기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(text, isError = false) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = `message ${isError ? 'error' : 'success'}`;
+            messageEl.style.display = 'block';
+
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function updateRelayStatus(relayNum, state) {
+            const statusEl = document.getElementById(`status-${relayNum}`);
+            const relayCard = document.getElementById(`relay-${relayNum}`);
+
+            if (state) {
+                statusEl.textContent = '열림';
+                statusEl.className = 'status-indicator status-on';
+            } else {
+                statusEl.textContent = '닫힘';
+                statusEl.className = 'status-indicator status-off';
+            }
+        }
+
+        function setRelay(relayNum, state) {
+            const relayCard = document.getElementById(`relay-${relayNum}`);
+            relayCard.classList.add('loading');
+
+            fetch(`/api/relay/${relayNum}/set`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ state: state })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    relayCard.classList.remove('loading');
+                    if (data.success) {
+                        updateRelayStatus(relayNum, data.state);
+                        showMessage(data.message);
+                    } else {
+                        showMessage(data.message, true);
+                    }
+                })
+                .catch(error => {
+                    relayCard.classList.remove('loading');
+                    showMessage('오류가 발생했습니다: ' + error.message, true);
+                });
+        }
+
+        function toggleRelay(relayNum) {
+            const relayCard = document.getElementById(`relay-${relayNum}`);
+            relayCard.classList.add('loading');
+
+            fetch(`/api/relay/${relayNum}/toggle`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    relayCard.classList.remove('loading');
+                    if (data.success) {
+                        updateRelayStatus(relayNum, data.state);
+                        showMessage(data.message);
+                    } else {
+                        showMessage(data.message, true);
+                    }
+                })
+                .catch(error => {
+                    relayCard.classList.remove('loading');
+                    showMessage('오류가 발생했습니다: ' + error.message, true);
+                });
+        }
+
+        function setAllRelays(state) {
+            const allCards = document.querySelectorAll('.relay-card');
+            allCards.forEach(card => card.classList.add('loading'));
+
+            const endpoint = state ? '/api/relay/all/on' : '/api/relay/all/off';
+
+            fetch(endpoint, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    allCards.forEach(card => card.classList.remove('loading'));
+                    if (data.success) {
+                        // 모든 릴레이 상태 업데이트
+                        for (let i = 0; i < {{ relay_names| length }
+                }; i++) {
+                updateRelayStatus(i, state);
+            }
+            showMessage(data.message);
+        } else {
+            showMessage(data.message, true);
+        }
+                })
+                .catch (error => {
+            allCards.forEach(card => card.classList.remove('loading'));
+            showMessage('오류가 발생했습니다: ' + error.message, true);
+        });
+        }
+
+        // 페이지 로드 시 상태 확인
+        window.addEventListener('load', function () {
+            fetch('/api/relay/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        data.relays.forEach(relay => {
+                            updateRelayStatus(relay.relay_num, relay.state);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('상태 확인 오류:', error);
+                });
+        });
+    </script>
+</body>
+
+</html>
