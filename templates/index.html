@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>릴레이 제어 시스템</title>
+    <title>Gate Valve Control System</title>
     <style>
         * {
             margin: 0;
@@ -247,8 +247,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔌 릴레이 제어 시스템</h1>
-            <p>라즈베리 파이 릴레이 모듈 웹 제어</p>
+            <h1>🔌 Gate Valve Control System</h1>
+            <p>Raspberry Pi Gate Valve Module Web Control</p>
         </div>
 
         <div class="relay-controls">
@@ -260,26 +260,28 @@
                     <div class="relay-name">{{ relay_names[i] }}</div>
                     <div class="status-indicator {% if relay_states[i] %}status-on{% else %}status-off{% endif %}"
                         id="status-{{ i }}">
-                        {% if relay_states[i] %}열림{% else %}닫힘{% endif %}
+                        {% if relay_states[i] %}ON{% else %}OFF{% endif %}
                     </div>
                 </div>
                 <div class="lock-control">
-                    <input type="checkbox" class="lock-checkbox" id="lock-{{ i }}" onchange="toggleLock({{ i }})">
-                    <label for="lock-{{ i }}" class="lock-label">🔒 잠금</label>
+                    <input type="checkbox" class="lock-checkbox" id="lock-{{ i }}" {% if relay_locks[i] %}checked{%
+                        endif %} onchange="toggleLock({{ i }})">
+                    <label for="lock-{{ i }}" class="lock-label">🔒 Lock</label>
                 </div>
                 <div class="control-buttons">
-                    <button class="btn btn-on" id="btn-on-{{ i }}" onclick="setRelay({{ i }}, true)">열기</button>
-                    <button class="btn btn-off" id="btn-off-{{ i }}" onclick="setRelay({{ i }}, false)">닫기</button>
-                    <button class="btn btn-toggle" id="btn-toggle-{{ i }}" onclick="toggleRelay({{ i }})">토글</button>
+                    <button class="btn btn-on" id="btn-on-{{ i }}" onclick="setRelay({{ i }}, true)">ON</button>
+                    <button class="btn btn-off" id="btn-off-{{ i }}" onclick="setRelay({{ i }}, false)">OFF</button>
+                    <button class="btn btn-toggle" id="btn-toggle-{{ i }}"
+                        onclick="toggleRelay({{ i }})">Toggle</button>
                 </div>
             </div>
             {% endfor %}
 
             <div class="global-controls">
-                <h3>전체 제어</h3>
+                <h3>Global Control</h3>
                 <div class="global-buttons">
-                    <button class="btn btn-global" onclick="setAllRelays(true)">모두 열기</button>
-                    <button class="btn btn-global" onclick="setAllRelays(false)">모두 닫기</button>
+                    <button class="btn btn-global" onclick="setAllRelays(true)">All ON</button>
+                    <button class="btn btn-global" onclick="setAllRelays(false)">All OFF</button>
                 </div>
             </div>
         </div>
@@ -302,10 +304,10 @@
             const relayCard = document.getElementById(`relay-${relayNum}`);
 
             if (state) {
-                statusEl.textContent = '열림';
+                statusEl.textContent = 'ON';
                 statusEl.className = 'status-indicator status-on';
             } else {
-                statusEl.textContent = '닫힘';
+                statusEl.textContent = 'OFF';
                 statusEl.className = 'status-indicator status-off';
             }
         }
@@ -333,7 +335,7 @@
                 })
                 .catch(error => {
                     relayCard.classList.remove('loading');
-                    showMessage('오류가 발생했습니다: ' + error.message, true);
+                    showMessage('An error occurred: ' + error.message, true);
                 });
         }
 
@@ -356,7 +358,7 @@
                 })
                 .catch(error => {
                     relayCard.classList.remove('loading');
-                    showMessage('오류가 발생했습니다: ' + error.message, true);
+                    showMessage('An error occurred: ' + error.message, true);
                 });
         }
 
@@ -373,13 +375,8 @@
                 .then(data => {
                     allCards.forEach(card => card.classList.remove('loading'));
                     if (data.success) {
-                        // 잠기지 않은 릴레이만 상태 업데이트
-                        for (let i = 0; i < RELAY_COUNT; i++) {
-                            const isLocked = localStorage.getItem(`relay_lock_${i}`) === 'true';
-                            if (!isLocked) {
-                                updateRelayStatus(i, state);
-                            }
-                        }
+                        // Update to latest state via status query
+                        updateAllRelayStates();
                         showMessage(data.message);
                     } else {
                         showMessage(data.message, true);
@@ -387,27 +384,43 @@
                 })
                 .catch(error => {
                     allCards.forEach(card => card.classList.remove('loading'));
-                    showMessage('오류가 발생했습니다: ' + error.message, true);
+                    showMessage('An error occurred: ' + error.message, true);
                 });
         }
 
-        // 릴레이 개수를 JavaScript 변수로 설정
+        // Set gate valve count as JavaScript variable
         const RELAY_COUNT = {{ relay_names| length }};
 
-        // 잠금 상태 관리 함수들
+        // Lock state management functions
         function toggleLock(relayNum) {
-            const checkbox = document.getElementById(`lock-${relayNum}`);
-            const isLocked = checkbox.checked;
+            fetch(`/api/relay/${relayNum}/lock`, {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update checkbox state
+                        const checkbox = document.getElementById(`lock-${relayNum}`);
+                        checkbox.checked = data.locked;
 
-            // 로컬 스토리지에 저장
-            localStorage.setItem(`relay_lock_${relayNum}`, isLocked);
+                        // Enable/disable buttons
+                        updateButtonStates(relayNum, data.locked);
 
-            // 버튼들 활성화/비활성화
-            updateButtonStates(relayNum, isLocked);
-
-            // 메시지 표시
-            const lockText = isLocked ? '잠김' : '해제';
-            showMessage(`릴레이 ${relayNum + 1} ${lockText}`);
+                        // Show message
+                        showMessage(data.message);
+                    } else {
+                        // Restore checkbox to original state on failure
+                        const checkbox = document.getElementById(`lock-${relayNum}`);
+                        checkbox.checked = !checkbox.checked;
+                        showMessage(data.message, true);
+                    }
+                })
+                .catch(error => {
+                    // Restore checkbox to original state on error
+                    const checkbox = document.getElementById(`lock-${relayNum}`);
+                    checkbox.checked = !checkbox.checked;
+                    showMessage('An error occurred: ' + error.message, true);
+                });
         }
 
         function updateButtonStates(relayNum, isLocked) {
@@ -420,33 +433,35 @@
             btnToggle.disabled = isLocked;
         }
 
-        function loadLockStates() {
-            for (let i = 0; i < RELAY_COUNT; i++) {
-                const isLocked = localStorage.getItem(`relay_lock_${i}`) === 'true';
-                const checkbox = document.getElementById(`lock-${i}`);
-                checkbox.checked = isLocked;
-                updateButtonStates(i, isLocked);
-            }
-        }
-
-        // 페이지 로드 시 상태 확인
-        window.addEventListener('load', function () {
-            // 잠금 상태 로드
-            loadLockStates();
-
+        function updateAllRelayStates() {
             fetch('/api/relay/status')
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         data.relays.forEach(relay => {
                             updateRelayStatus(relay.relay_num, relay.state);
+
+                            // Update lock state
+                            const checkbox = document.getElementById(`lock-${relay.relay_num}`);
+                            if (checkbox) {
+                                checkbox.checked = relay.locked;
+                                updateButtonStates(relay.relay_num, relay.locked);
+                            }
                         });
                     }
                 })
                 .catch(error => {
-                    console.error('상태 확인 오류:', error);
+                    console.error('Status check error:', error);
                 });
+        }
+
+        // Check status on page load
+        window.addEventListener('load', function () {
+            updateAllRelayStates();
         });
+
+        // Periodically update status (reflect changes from other clients)
+        setInterval(updateAllRelayStates, 2000); // Update every 2 seconds
     </script>
 </body>
 
