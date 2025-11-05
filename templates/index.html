@@ -260,7 +260,7 @@
                     <div class="relay-name">{{ relay_names[i] }}</div>
                     <div class="status-indicator {% if relay_states[i] %}status-on{% else %}status-off{% endif %}"
                         id="status-{{ i }}">
-                        {% if relay_states[i] %}ON{% else %}OFF{% endif %}
+                        {% if relay_states[i] %}Open{% else %}Close{% endif %}
                     </div>
                 </div>
                 <div class="lock-control">
@@ -269,8 +269,8 @@
                     <label for="lock-{{ i }}" class="lock-label">🔒 Lock</label>
                 </div>
                 <div class="control-buttons">
-                    <button class="btn btn-on" id="btn-on-{{ i }}" onclick="setRelay({{ i }}, true)">ON</button>
-                    <button class="btn btn-off" id="btn-off-{{ i }}" onclick="setRelay({{ i }}, false)">OFF</button>
+                    <button class="btn btn-on" id="btn-on-{{ i }}" onclick="setRelay({{ i }}, true)">Open</button>
+                    <button class="btn btn-off" id="btn-off-{{ i }}" onclick="setRelay({{ i }}, false)">Close</button>
                     <button class="btn btn-toggle" id="btn-toggle-{{ i }}"
                         onclick="toggleRelay({{ i }})">Toggle</button>
                 </div>
@@ -280,8 +280,8 @@
             <div class="global-controls">
                 <h3>Global Control</h3>
                 <div class="global-buttons">
-                    <button class="btn btn-global" onclick="setAllRelays(true)">All ON</button>
-                    <button class="btn btn-global" onclick="setAllRelays(false)">All OFF</button>
+                    <button class="btn btn-global" onclick="setAllRelays(true)">All Open</button>
+                    <button class="btn btn-global" onclick="setAllRelays(false)">All Close</button>
                 </div>
             </div>
         </div>
@@ -304,10 +304,10 @@
             const relayCard = document.getElementById(`relay-${relayNum}`);
 
             if (state) {
-                statusEl.textContent = 'ON';
+                statusEl.textContent = 'Open';
                 statusEl.className = 'status-indicator status-on';
             } else {
-                statusEl.textContent = 'OFF';
+                statusEl.textContent = 'Close';
                 statusEl.className = 'status-indicator status-off';
             }
         }

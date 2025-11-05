@@ -12,7 +12,7 @@ app = Flask(__name__)
 RELAY_PINS = [27, 17]  # GV Upstream, GV Downstream
 RELAY_NAMES = ["GV Upstream", "GV Downstream"]
 
-# Gate valve state storage (True = ON, False = OFF)
+# Gate valve state storage (True = Open, False = Close)
 relay_states = [False, False]
 
 # Gate valve lock state storage (True = locked, False = unlocked)
@@ -91,7 +91,7 @@ def toggle_relay(relay_num):
             'success': True,
             'relay_num': relay_num,
             'state': new_state,
-            'message': f'{RELAY_NAMES[relay_num]} {"ON" if new_state else "OFF"}'
+            'message': f'{RELAY_NAMES[relay_num]} {"Open" if new_state else "Close"}'
         })
     else:
         return jsonify({
@@ -124,7 +124,7 @@ def set_relay(relay_num):
             'success': True,
             'relay_num': relay_num,
             'state': state,
-            'message': f'{RELAY_NAMES[relay_num]} {"ON" if state else "OFF"}'
+            'message': f'{RELAY_NAMES[relay_num]} {"Open" if state else "Close"}'
         })
     else:
         return jsonify({
@@ -142,7 +142,7 @@ def get_relay_status():
             'name': RELAY_NAMES[i],
             'state': relay_states[i],
             'locked': relay_locks[i],
-            'status_text': "ON" if relay_states[i] else "OFF"
+            'status_text': "Open" if relay_states[i] else "Close"
         })
 
     return jsonify({
@@ -160,7 +160,7 @@ def turn_off_all():
         else:
             locked_relays.append(RELAY_NAMES[i])
 
-    message = 'All gate valves are OFF.'
+    message = 'All gate valves are Close.'
     if locked_relays:
         message += f' (Locked gate valves: {", ".join(locked_relays)})'
 
@@ -179,7 +179,7 @@ def turn_on_all():
         else:
             locked_relays.append(RELAY_NAMES[i])
 
-    message = 'All gate valves are ON.'
+    message = 'All gate valves are Open.'
     if locked_relays:
         message += f' (Locked gate valves: {", ".join(locked_relays)})'
 
